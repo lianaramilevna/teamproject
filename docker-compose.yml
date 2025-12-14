@@ -1,0 +1,85 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: learningplatform-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: learning_platform
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - learningplatform-network
+
+  api:
+    build:
+      context: .
+      dockerfile: LearningPlatform.API/Dockerfile
+    container_name: learningplatform-api
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+      - "8083:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=learning_platform;Username=postgres;Password=postgres
+    volumes:
+      - ./LearningPlatform.API/logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - learningplatform-network
+
+  client:
+    build:
+      context: .
+      dockerfile: LearningPlatform.Client/Dockerfile
+    container_name: learningplatform-client
+    restart: unless-stopped
+    ports:
+      - "5002:5000"
+      - "5003:5001"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - ApiBaseUrl=http://api:8080
+    volumes:
+      - ./LearningPlatform.Client/logs:/app/logs
+    depends_on:
+      - api
+    networks:
+      - learningplatform-network
+
+  backgroundtasks:
+    build:
+      context: .
+      dockerfile: LearningPlatform.BackgroundTasks/Dockerfile
+    container_name: learningplatform-backgroundtasks
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=learning_platform;Username=postgres;Password=postgres
+    volumes:
+      - ./LearningPlatform.BackgroundTasks/logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - learningplatform-network
+
+volumes:
+  pgdata:
+
+networks:
+  learningplatform-network:
+    driver: bridge
