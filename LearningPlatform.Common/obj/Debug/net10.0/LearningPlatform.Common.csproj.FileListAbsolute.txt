@@ -1,0 +1,11 @@
+/Users/ilnur/team_learn/LearningPlatform.Common/bin/Debug/net10.0/LearningPlatform.Common.deps.json
+/Users/ilnur/team_learn/LearningPlatform.Common/bin/Debug/net10.0/LearningPlatform.Common.dll
+/Users/ilnur/team_learn/LearningPlatform.Common/bin/Debug/net10.0/LearningPlatform.Common.pdb
+/Users/ilnur/team_learn/LearningPlatform.Common/obj/Debug/net10.0/LearningPlatform.Common.GeneratedMSBuildEditorConfig.editorconfig
+/Users/ilnur/team_learn/LearningPlatform.Common/obj/Debug/net10.0/LearningPlatform.Common.AssemblyInfoInputs.cache
+/Users/ilnur/team_learn/LearningPlatform.Common/obj/Debug/net10.0/LearningPlatform.Common.AssemblyInfo.cs
+/Users/ilnur/team_learn/LearningPlatform.Common/obj/Debug/net10.0/LearningPlatform.Common.csproj.CoreCompileInputs.cache
+/Users/ilnur/team_learn/LearningPlatform.Common/obj/Debug/net10.0/LearningPlatform.Common.dll
+/Users/ilnur/team_learn/LearningPlatform.Common/obj/Debug/net10.0/refint/LearningPlatform.Common.dll
+/Users/ilnur/team_learn/LearningPlatform.Common/obj/Debug/net10.0/LearningPlatform.Common.pdb
+/Users/ilnur/team_learn/LearningPlatform.Common/obj/Debug/net10.0/ref/LearningPlatform.Common.dll

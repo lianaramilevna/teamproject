@@ -1,0 +1,552 @@
+@page "/assignments/{AssignmentId:guid}"
+@rendermode InteractiveServer
+@inject AssignmentsApiService AssignmentsService
+@inject SubmissionsApiService SubmissionsService
+@inject AuthStateService AuthStateService
+@inject NavigationManager Navigation
+@inject ILogger<AssignmentDetails> Logger
+@using Microsoft.AspNetCore.WebUtilities
+
+<PageTitle>Assignment - Learning Platform</PageTitle>
+
+<div class="container-fluid">
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (assignment == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle"></i> Assignment not found.
+        </div>
+    }
+    else
+    {
+        <div class="mb-4">
+            <a href="/courses" class="btn btn-link text-muted mb-2">
+                <i class="bi bi-arrow-left"></i> Back to Courses
+            </a>
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h1 class="mb-2">
+                        <i class="bi bi-file-earmark-text text-primary"></i> @assignment.Title
+                    </h1>
+                    <p class="text-muted mb-3">@assignment.Description</p>
+                    @if (assignment.DueDateUtc.HasValue)
+                    {
+                        var isOverdue = assignment.DueDateUtc.Value < DateTime.UtcNow;
+                        <div class="mb-3">
+                            <span class="badge @(isOverdue ? "bg-danger" : "bg-warning")">
+                                <i class="bi bi-calendar-event"></i> 
+                                Due: @assignment.DueDateUtc.Value.ToLocalTime().ToString("MMMM dd, yyyy 'at' HH:mm")
+                            </span>
+                        </div>
+                    }
+                </div>
+                @if (AuthStateService.IsInstructor)
+                {
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary" @onclick="ShowEditModal">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                        <button class="btn btn-outline-danger" @onclick="ShowDeleteConfirm">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (AuthStateService.IsInstructor)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list-check"></i> Submissions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (submissions == null || !submissions.Any())
+                    {
+                        <p class="text-muted mb-0">No submissions yet.</p>
+                    }
+                    else
+                    {
+                        <div class="list-group">
+                            @foreach (var submission in submissions)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">Student Submission</h6>
+                                            <p class="mb-1">
+                                                <a href="@submission.Link" target="_blank" class="text-decoration-none">
+                                                    <i class="bi bi-link-45deg"></i> @submission.Link
+                                                </a>
+                                            </p>
+                                            <small class="text-muted">
+                                                Submitted: @submission.SubmittedAtUtc.ToLocalTime().ToString("MMMM dd, yyyy 'at' HH:mm")
+                                            </small>
+                                            @if (submission.Grade.HasValue)
+                                            {
+                                                <div class="mt-2">
+                                                    <span class="badge bg-success">Grade: @submission.Grade</span>
+                                                    @if (!string.IsNullOrEmpty(submission.Comment))
+                                                    {
+                                                        <p class="mb-0 mt-2"><strong>Comment:</strong> @submission.Comment</p>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                        <div>
+                                            @{
+                                                var uri = new Uri(Navigation.Uri);
+                                                var courseIdParam = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query).TryGetValue("courseId", out var courseIdValue);
+                                                var courseId = courseIdParam && Guid.TryParse(courseIdValue, out var cid) ? cid : Guid.Empty;
+                                                var gradeUrl = courseId != Guid.Empty 
+                                                    ? $"/submissions/{submission.Id}/grade?courseId={courseId}" 
+                                                    : $"/submissions/{submission.Id}/grade";
+                                            }
+                                            @if (!submission.Grade.HasValue)
+                                            {
+                                                <a href="@gradeUrl" class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-star"></i> Grade
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a href="@gradeUrl" class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-pencil"></i> Update Grade
+                                                </a>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (AuthStateService.IsStudent)
+        {
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-cloud-upload"></i> Submit Your Work
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(submitError))
+                    {
+                        <div class="alert alert-danger mb-3">
+                            <i class="bi bi-exclamation-circle"></i> @submitError
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(submitSuccess))
+                    {
+                        <div class="alert alert-success mb-3">
+                            <i class="bi bi-check-circle"></i> @submitSuccess
+                        </div>
+                    }
+                    <EditForm Model="@submitRequest" OnValidSubmit="@HandleSubmit" FormName="submitAssignmentForm">
+                        <DataAnnotationsValidator />
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-link-45deg"></i> Link to your work
+                            </label>
+                            <InputText @bind-value="submitRequest.Link" class="form-control form-control-lg" placeholder="https://github.com/username/repo or https://drive.google.com/..." disabled="@isSubmitting" />
+                            <ValidationMessage For="@(() => submitRequest.Link)" />
+                            <small class="text-muted">Provide a link to your GitHub repository, Google Drive, or other hosting service</small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span>Submitting...</span>
+                                }
+                                else
+                                {
+                                    <span><i class="bi bi-send"></i> Submit Assignment</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    }
+
+    <!-- Edit Assignment Modal -->
+    @if (showEditModal)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-pencil"></i> Edit Assignment
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseEditModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (!string.IsNullOrEmpty(editError))
+                        {
+                            <div class="alert alert-danger mb-3">
+                                <i class="bi bi-exclamation-circle"></i> @editError
+                            </div>
+                        }
+                        <EditForm Model="@updateRequest" OnValidSubmit="@HandleUpdateAssignment" FormName="updateAssignmentForm">
+                            <DataAnnotationsValidator />
+                            <div class="mb-3">
+                                <label class="form-label">Assignment Title</label>
+                                <InputText @bind-value="updateRequest.Title" class="form-control" placeholder="e.g., Homework 1: Introduction" />
+                                <ValidationMessage For="@(() => updateRequest.Title)" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <InputTextArea @bind-value="updateRequest.Description" class="form-control" rows="5" placeholder="Describe the assignment requirements..." />
+                                <ValidationMessage For="@(() => updateRequest.Description)" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Due Date</label>
+                                <InputDate @bind-value="dueDate" class="form-control" />
+                                <small class="text-muted">Select when this assignment is due</small>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1" disabled="@isUpdating">
+                                    @if (isUpdating)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Updating...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Update Assignment</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancel</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Delete Assignment Confirmation Modal -->
+    @if (showDeleteConfirm)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle"></i> Delete Assignment
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteConfirm"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete the assignment <strong>@assignment?.Title</strong>?</p>
+                        <p class="text-danger"><small>This action cannot be undone. All submissions will also be deleted.</small></p>
+                        @if (!string.IsNullOrEmpty(deleteError))
+                        {
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-circle"></i> @deleteError
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirm">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="HandleDeleteAssignment" disabled="@isDeleting">
+                            @if (isDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Deleting...</span>
+                            }
+                            else
+                            {
+                                <span><i class="bi bi-trash"></i> Delete Assignment</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid AssignmentId { get; set; }
+
+    private AssignmentDto? assignment;
+    private List<SubmissionDto>? submissions;
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private bool showEditModal = false;
+    private bool isUpdating = false;
+    private bool showDeleteConfirm = false;
+    private bool isDeleting = false;
+    private SubmitAssignmentRequest submitRequest = new();
+    private UpdateAssignmentRequest updateRequest = new();
+    private DateTime? dueDate;
+    private string? editError;
+    private string? deleteError;
+    private string? submitError;
+    private string? submitSuccess;
+
+    private bool hasCheckedAuth = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("[AssignmentDetails.OnInitializedAsync] Starting. AssignmentId: {AssignmentId}", AssignmentId);
+        // Don't call InitializeAsync here - JSRuntime is not ready during OnInitializedAsync
+        // We'll check in OnAfterRenderAsync instead
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasCheckedAuth)
+        {
+            hasCheckedAuth = true;
+            Logger.LogInformation("[AssignmentDetails.OnAfterRenderAsync] First render, checking auth state");
+            
+            try
+            {
+                await AuthStateService.InitializeAsync();
+                
+                var isAuth = AuthStateService.IsAuthenticated;
+                Logger.LogInformation("[AssignmentDetails.OnAfterRenderAsync] After InitializeAsync. IsAuthenticated: {IsAuth}", isAuth);
+                
+                // Redirect to login if not authenticated
+                if (!isAuth)
+                {
+                    Logger.LogInformation("[AssignmentDetails.OnAfterRenderAsync] Not authenticated, waiting 100ms and retrying");
+                    await Task.Delay(100);
+                    await AuthStateService.InitializeAsync();
+                    
+                    isAuth = AuthStateService.IsAuthenticated;
+                    if (!isAuth)
+                    {
+                        Logger.LogWarning("[AssignmentDetails.OnAfterRenderAsync] Still not authenticated, redirecting to /login");
+                        Navigation.NavigateTo("/login", forceLoad: true);
+                        return;
+                    }
+                }
+                
+                Logger.LogInformation("[AssignmentDetails.OnAfterRenderAsync] Loading assignment");
+                await LoadAssignment();
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "[AssignmentDetails.OnAfterRenderAsync] Error checking auth state or loading assignment");
+                isLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async Task LoadAssignment()
+    {
+        isLoading = true;
+        try
+        {
+            // Get courseId from query string or try to get from assignment
+            var uri = new Uri(Navigation.Uri);
+            var courseIdParam = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query).TryGetValue("courseId", out var courseIdValue);
+            var courseId = courseIdParam && Guid.TryParse(courseIdValue, out var cid) ? cid : Guid.Empty;
+
+            assignment = await AssignmentsService.GetAssignmentByIdAsync(courseId, AssignmentId);
+            if (assignment != null)
+            {
+                submitRequest.AssignmentId = AssignmentId;
+                if (AuthStateService.IsInstructor)
+                {
+                    submissions = await SubmissionsService.GetSubmissionsAsync(AssignmentId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading assignment");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowEditModal()
+    {
+        if (assignment != null)
+        {
+            updateRequest = new UpdateAssignmentRequest
+            {
+                Title = assignment.Title,
+                Description = assignment.Description,
+                DueDateUtc = assignment.DueDateUtc
+            };
+            dueDate = assignment.DueDateUtc?.ToLocalTime();
+            editError = null;
+            showEditModal = true;
+        }
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        editError = null;
+    }
+
+    private async Task HandleUpdateAssignment()
+    {
+        if (dueDate.HasValue)
+        {
+            updateRequest.DueDateUtc = dueDate.Value.ToUniversalTime();
+        }
+        else
+        {
+            updateRequest.DueDateUtc = null;
+        }
+
+        isUpdating = true;
+        editError = null;
+        try
+        {
+            if (assignment != null)
+            {
+                var updatedAssignment = await AssignmentsService.UpdateAssignmentAsync(assignment.CourseId, AssignmentId, updateRequest);
+                if (updatedAssignment != null)
+                {
+                    await LoadAssignment();
+                    CloseEditModal();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating assignment");
+            editError = ex.Message;
+        }
+        finally
+        {
+            isUpdating = false;
+        }
+    }
+
+    private void ShowDeleteConfirm()
+    {
+        showDeleteConfirm = true;
+        deleteError = null;
+    }
+
+    private void CloseDeleteConfirm()
+    {
+        showDeleteConfirm = false;
+        deleteError = null;
+    }
+
+    private async Task HandleDeleteAssignment()
+    {
+        isDeleting = true;
+        deleteError = null;
+        try
+        {
+            if (assignment != null)
+            {
+                var success = await AssignmentsService.DeleteAssignmentAsync(assignment.CourseId, AssignmentId);
+                if (success)
+                {
+                    Navigation.NavigateTo($"/courses/{assignment.CourseId}");
+                }
+                else
+                {
+                    deleteError = "Failed to delete assignment. Please try again.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting assignment");
+            deleteError = ex.Message;
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        isSubmitting = true;
+        submitError = null;
+        submitSuccess = null;
+        StateHasChanged();
+        
+        try
+        {
+            Logger.LogInformation("[AssignmentDetails.HandleSubmit] Starting. AssignmentId: {AssignmentId}, Link: {Link}", 
+                submitRequest.AssignmentId, submitRequest.Link);
+            
+            if (submitRequest.AssignmentId == Guid.Empty)
+            {
+                submitError = "Assignment ID is missing. Please refresh the page and try again.";
+                Logger.LogWarning("[AssignmentDetails.HandleSubmit] AssignmentId is empty");
+                isSubmitting = false;
+                StateHasChanged();
+                return;
+            }
+            
+            if (string.IsNullOrWhiteSpace(submitRequest.Link))
+            {
+                submitError = "Please provide a link to your work.";
+                Logger.LogWarning("[AssignmentDetails.HandleSubmit] Link is empty");
+                isSubmitting = false;
+                StateHasChanged();
+                return;
+            }
+            
+            var submission = await SubmissionsService.SubmitAssignmentAsync(submitRequest);
+            if (submission != null)
+            {
+                Logger.LogInformation("[AssignmentDetails.HandleSubmit] Submission successful. SubmissionId: {SubmissionId}", submission.Id);
+                submitSuccess = "Assignment submitted successfully! Redirecting to courses...";
+                submitRequest.Link = string.Empty; // Clear the form
+                isSubmitting = false;
+                StateHasChanged();
+                
+                // Wait a bit so user can see the success message
+                await Task.Delay(1500);
+                Navigation.NavigateTo("/courses", forceLoad: true);
+            }
+            else
+            {
+                submitError = "Failed to submit assignment. Please check your connection and try again.";
+                Logger.LogWarning("[AssignmentDetails.HandleSubmit] Submission returned null");
+                isSubmitting = false;
+                StateHasChanged();
+            }
+        }
+        catch (System.Net.Http.HttpRequestException ex)
+        {
+            Logger.LogError(ex, "[AssignmentDetails.HandleSubmit] HTTP error submitting assignment");
+            submitError = ex.Message;
+            isSubmitting = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[AssignmentDetails.HandleSubmit] Error submitting assignment");
+            submitError = $"An error occurred: {ex.Message}";
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+}

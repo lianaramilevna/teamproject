@@ -1,0 +1,55 @@
+.navbar-container {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.navbar-brand {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.navbar-nav-main {
+    display: flex;
+    flex-direction: row;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.navbar-nav-main .nav-item {
+    margin-right: 1rem;
+    white-space: nowrap;
+}
+
+.navbar-nav-user {
+    display: flex;
+    flex-direction: row;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.navbar-nav .nav-link {
+    background: transparent !important;
+    white-space: nowrap;
+}
+
+.navbar-nav .nav-link:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.navbar-nav .nav-link.active {
+    background: transparent !important;
+}
+
+.navbar-nav .nav-link.active:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+

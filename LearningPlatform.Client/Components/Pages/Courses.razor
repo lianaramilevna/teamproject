@@ -1,0 +1,407 @@
+@page "/courses"
+@rendermode InteractiveServer
+@inject CoursesApiService CoursesService
+@inject AuthStateService AuthStateService
+@inject NavigationManager Navigation
+@inject ILogger<Courses> Logger
+
+<PageTitle>My Courses - Learning Platform</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="mb-1"><i class="bi bi-book-fill text-primary"></i> My Courses</h1>
+            <p class="text-muted mb-0">Manage your courses and assignments</p>
+        </div>
+        @if (AuthStateService.IsInstructor)
+        {
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Create Course
+            </button>
+        }
+        else
+        {
+            <button class="btn btn-primary" @onclick="ShowJoinModal">
+                <i class="bi bi-plus-circle"></i> Join Course
+            </button>
+        }
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mt-3">Loading your courses...</p>
+        </div>
+    }
+    else if (courses == null || !courses.Any())
+    {
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="bi bi-book" style="font-size: 4rem; color: #dee2e6;"></i>
+            </div>
+            <h3 class="text-muted">No courses yet</h3>
+            <p class="text-muted mb-4">
+                @if (AuthStateService.IsInstructor)
+                {
+                    <span>Create your first course to get started!</span>
+                }
+                else
+                {
+                    <span>Join a course using a join code or wait for an instructor to add you.</span>
+                }
+            </p>
+            @if (AuthStateService.IsInstructor)
+            {
+                <button class="btn btn-primary btn-lg" @onclick="ShowCreateModal">
+                    <i class="bi bi-plus-circle"></i> Create Your First Course
+                </button>
+            }
+            else
+            {
+                <button class="btn btn-primary btn-lg" @onclick="ShowJoinModal">
+                    <i class="bi bi-plus-circle"></i> Join a Course
+                </button>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var course in courses)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="course-card">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="flex-grow-1">
+                                <h3 class="course-title">@course.Title</h3>
+                                <p class="course-description">@course.Description</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <span class="badge bg-light text-dark">
+                                <i class="bi bi-key"></i> Join Code: <strong>@course.JoinCode</strong>
+                            </span>
+                        </div>
+                        
+                        <a href="/courses/@course.Id" class="btn btn-primary w-100">
+                            <i class="bi bi-arrow-right-circle"></i> View Course
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <!-- Create Course Modal -->
+    @if (showCreateModal)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-plus-circle"></i> Create New Course
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseCreateModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (!string.IsNullOrEmpty(createError))
+                        {
+                            <div class="alert alert-danger mb-3">
+                                <i class="bi bi-exclamation-circle"></i> @createError
+                            </div>
+                        }
+                        <EditForm Model="@createRequest" OnValidSubmit="@HandleCreateCourse" FormName="createCourseForm">
+                            <DataAnnotationsValidator />
+                            <div class="mb-3">
+                                <label class="form-label">Course Title</label>
+                                <InputText @bind-value="createRequest.Title" class="form-control" placeholder="e.g., Introduction to Programming" />
+                                <ValidationMessage For="@(() => createRequest.Title)" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <InputTextArea @bind-value="createRequest.Description" class="form-control" rows="4" placeholder="Describe what students will learn..." />
+                                <ValidationMessage For="@(() => createRequest.Description)" />
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1" disabled="@isCreating">
+                                    @if (isCreating)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Creating...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Create Course</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn btn-secondary" @onclick="CloseCreateModal">Cancel</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Join Course Modal -->
+    @if (showJoinModal)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-key"></i> Join Course
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseJoinModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Enter Join Code</label>
+                            <input type="text" @bind="joinCode" class="form-control form-control-lg text-center" placeholder="XXXXXXXXXXXX" maxlength="12" style="font-size: 1.5rem; letter-spacing: 0.2rem; font-weight: 600; text-transform: uppercase;" />
+                            <small class="text-muted">Enter the 12-character join code (no spaces or dashes)</small>
+                        </div>
+                        @if (!string.IsNullOrEmpty(joinError))
+                        {
+                            <div class="alert alert-danger">@joinError</div>
+                        }
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-primary flex-grow-1" @onclick="HandleJoinCourse" disabled="@isJoining">
+                                @if (isJoining)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span>Joining...</span>
+                                }
+                                else
+                                {
+                                    <span>Join Course</span>
+                                }
+                            </button>
+                            <button type="button" class="btn btn-secondary" @onclick="CloseJoinModal">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<CourseDto>? courses;
+    private bool isLoading = true;
+    private bool showCreateModal = false;
+    private bool showJoinModal = false;
+    private bool isCreating = false;
+    private bool isJoining = false;
+    private CreateCourseRequest createRequest = new();
+    private string joinCode = "";
+    private string? joinError;
+    private string? createError;
+
+    private bool hasCheckedAuth = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("[Courses.OnInitializedAsync] Starting");
+        // Don't call InitializeAsync here - JSRuntime is not ready during OnInitializedAsync
+        // We'll check in OnAfterRenderAsync instead
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasCheckedAuth)
+        {
+            hasCheckedAuth = true;
+            Logger.LogInformation("[Courses.OnAfterRenderAsync] First render, checking auth state");
+            
+            try
+            {
+                await AuthStateService.InitializeAsync();
+                
+                var isAuth = AuthStateService.IsAuthenticated;
+                Logger.LogInformation("[Courses.OnAfterRenderAsync] After InitializeAsync. IsAuthenticated: {IsAuth}, CurrentUser: {Email}, Role: {Role}", 
+                    isAuth, AuthStateService.CurrentUser?.Email ?? "null", AuthStateService.CurrentRole?.ToString() ?? "null");
+                
+                // Redirect to login if not authenticated
+                if (!isAuth)
+                {
+                    Logger.LogInformation("[Courses.OnAfterRenderAsync] Not authenticated, waiting 100ms and retrying");
+                    await Task.Delay(100);
+                    await AuthStateService.InitializeAsync();
+                    
+                    isAuth = AuthStateService.IsAuthenticated;
+                    Logger.LogInformation("[Courses.OnAfterRenderAsync] After retry. IsAuthenticated: {IsAuth}, CurrentUser: {Email}, Role: {Role}", 
+                        isAuth, AuthStateService.CurrentUser?.Email ?? "null", AuthStateService.CurrentRole?.ToString() ?? "null");
+                    
+                    if (!isAuth)
+                    {
+                        Logger.LogWarning("[Courses.OnAfterRenderAsync] Still not authenticated, redirecting to /login");
+                        Navigation.NavigateTo("/login", forceLoad: true);
+                        return;
+                    }
+                    else
+                    {
+                        Logger.LogInformation("[Courses.OnAfterRenderAsync] Authentication verified after retry");
+                    }
+                }
+                
+                Logger.LogInformation("[Courses.OnAfterRenderAsync] Loading courses");
+                await LoadCourses();
+                
+                // Force UI update after loading
+                Logger.LogInformation("[Courses.OnAfterRenderAsync] Courses loaded, updating UI. Count: {Count}, isLoading: {IsLoading}", 
+                    courses?.Count ?? 0, isLoading);
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "[Courses.OnAfterRenderAsync] Error checking auth state or loading courses: {Message}, StackTrace: {StackTrace}", 
+                    ex.Message, ex.StackTrace);
+                isLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async Task LoadCourses()
+    {
+        Logger.LogInformation("[Courses.LoadCourses] Starting to load courses. Current isLoading: {IsLoading}", isLoading);
+        isLoading = true;
+        await InvokeAsync(StateHasChanged);
+        
+        try
+        {
+            Logger.LogInformation("[Courses.LoadCourses] Calling CoursesService.GetCoursesAsync");
+            var result = await CoursesService.GetCoursesAsync();
+            Logger.LogInformation("[Courses.LoadCourses] CoursesService.GetCoursesAsync returned. Is null: {IsNull}, Count: {Count}", 
+                result == null, result?.Count ?? 0);
+            
+            courses = result ?? new List<CourseDto>();
+            Logger.LogInformation("[Courses.LoadCourses] Courses set. Final count: {Count}", courses.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[Courses.LoadCourses] Error loading courses: {Message}, Type: {Type}, StackTrace: {StackTrace}", 
+                ex.Message, ex.GetType().Name, ex.StackTrace);
+            courses = new List<CourseDto>();
+        }
+        finally
+        {
+            isLoading = false;
+            Logger.LogInformation("[Courses.LoadCourses] Finished. isLoading set to false, courses count: {Count}", courses?.Count ?? 0);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        showCreateModal = true;
+        createRequest = new();
+        createError = null;
+    }
+
+    private void CloseCreateModal()
+    {
+        showCreateModal = false;
+    }
+
+    private void ShowJoinModal()
+    {
+        showJoinModal = true;
+        joinCode = "";
+        joinError = null;
+    }
+
+    private void CloseJoinModal()
+    {
+        showJoinModal = false;
+        joinCode = "";
+        joinError = null;
+    }
+
+    private async Task HandleCreateCourse()
+    {
+        isCreating = true;
+        createError = null;
+        try
+        {
+            var course = await CoursesService.CreateCourseAsync(createRequest);
+            if (course != null)
+            {
+                await LoadCourses();
+                CloseCreateModal();
+            }
+            else
+            {
+                createError = "Failed to create course. Please check that you have instructor permissions and try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating course");
+            createError = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isCreating = false;
+        }
+    }
+
+    private async Task HandleJoinCourse()
+    {
+        if (string.IsNullOrWhiteSpace(joinCode))
+        {
+            joinError = "Please enter a join code";
+            return;
+        }
+
+        isJoining = true;
+        joinError = null;
+        try
+        {
+            // Remove any spaces, dashes, or other non-alphanumeric characters
+            var cleanJoinCode = new string(joinCode.Trim().Where(c => char.IsLetterOrDigit(c)).ToArray()).ToUpper();
+            
+            if (cleanJoinCode.Length != 12)
+            {
+                joinError = "Join code must be exactly 12 characters.";
+                isJoining = false;
+                return;
+            }
+
+            var request = new JoinCourseRequest { JoinCode = cleanJoinCode };
+            var course = await CoursesService.JoinCourseAsync(request);
+            if (course != null)
+            {
+                await LoadCourses();
+                CloseJoinModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error joining course: {Message}", ex.Message);
+            // Try to extract error message from JSON response
+            if (ex.Message.Contains("Course not found") || ex.Message.Contains("not found"))
+            {
+                joinError = "Invalid join code. Course not found.";
+            }
+            else if (ex.Message.Contains("already"))
+            {
+                joinError = "You are already a member of this course.";
+            }
+            else
+            {
+                joinError = $"Error: {ex.Message}";
+            }
+        }
+        finally
+        {
+            isJoining = false;
+        }
+    }
+}

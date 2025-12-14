@@ -1,0 +1,15 @@
+namespace LearningPlatform.Common.DTOs.Submissions;
+
+public class SubmissionDto
+{
+    public Guid Id { get; set; }
+    public Guid AssignmentId { get; set; }
+    public Guid StudentId { get; set; }
+    public string Link { get; set; } = string.Empty;
+    public int? Grade { get; set; }
+    public string? Comment { get; set; }
+    public DateTime SubmittedAtUtc { get; set; }
+    public DateTime? GradedAtUtc { get; set; }
+}
+
+

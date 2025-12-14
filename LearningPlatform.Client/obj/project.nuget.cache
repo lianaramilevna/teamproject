@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "dgSpecHash": "tr6fjYtu2Cw=",
+  "success": true,
+  "projectFilePath": "/Users/ilnur/team_learn/LearningPlatform.Client/LearningPlatform.Client.csproj",
+  "expectedPackageFiles": [
+    "/Users/ilnur/.nuget/packages/microsoft.aspnetcore.app.internal.assets/10.0.1/microsoft.aspnetcore.app.internal.assets.10.0.1.nupkg.sha512",
+    "/Users/ilnur/.nuget/packages/microsoft.extensions.dependencymodel/8.0.1/microsoft.extensions.dependencymodel.8.0.1.nupkg.sha512",
+    "/Users/ilnur/.nuget/packages/serilog/4.0.0/serilog.4.0.0.nupkg.sha512",
+    "/Users/ilnur/.nuget/packages/serilog.aspnetcore/8.0.2/serilog.aspnetcore.8.0.2.nupkg.sha512",
+    "/Users/ilnur/.nuget/packages/serilog.enrichers.environment/3.0.1/serilog.enrichers.environment.3.0.1.nupkg.sha512",
+    "/Users/ilnur/.nuget/packages/serilog.enrichers.thread/4.0.0/serilog.enrichers.thread.4.0.0.nupkg.sha512",
+    "/Users/ilnur/.nuget/packages/serilog.extensions.hosting/8.0.0/serilog.extensions.hosting.8.0.0.nupkg.sha512",
+    "/Users/ilnur/.nuget/packages/serilog.extensions.logging/8.0.0/serilog.extensions.logging.8.0.0.nupkg.sha512",
+    "/Users/ilnur/.nuget/packages/serilog.formatting.compact/2.0.0/serilog.formatting.compact.2.0.0.nupkg.sha512",
+    "/Users/ilnur/.nuget/packages/serilog.settings.configuration/8.0.2/serilog.settings.configuration.8.0.2.nupkg.sha512",
+    "/Users/ilnur/.nuget/packages/serilog.sinks.console/6.0.0/serilog.sinks.console.6.0.0.nupkg.sha512",
+    "/Users/ilnur/.nuget/packages/serilog.sinks.debug/2.0.0/serilog.sinks.debug.2.0.0.nupkg.sha512",
+    "/Users/ilnur/.nuget/packages/serilog.sinks.file/6.0.0/serilog.sinks.file.6.0.0.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -1,0 +1,103 @@
+@rendermode InteractiveServer
+@inject AuthStateService AuthStateService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<div class="top-row ps-3 navbar navbar-dark bg-primary">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+        <a class="navbar-brand" href="/">
+            <strong>Learning Platform</strong>
+        </a>
+        @if (AuthStateService != null && AuthStateService.IsAuthenticated)
+        {
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-white">
+                    <i class="bi bi-person-circle"></i> @(AuthStateService.CurrentUser?.Email ?? "User")
+                </span>
+                <span class="badge bg-light text-dark">@(AuthStateService.CurrentRole?.ToString() ?? "")</span>
+                <button class="btn btn-outline-light btn-sm" @onclick="HandleLogout">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+        @if (AuthStateService != null && AuthStateService.IsAuthenticated)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/courses" Match="NavLinkMatch.Prefix">
+                    <i class="bi bi-book-fill"></i> My Courses
+                </NavLink>
+            </div>
+            
+            @if (AuthStateService.IsInstructor)
+            {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/courses">
+                        <i class="bi bi-plus-circle"></i> Create Course
+                    </NavLink>
+                </div>
+            }
+            else
+            {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/courses">
+                        <i class="bi bi-plus-circle"></i> Join Course
+                    </NavLink>
+                </div>
+            }
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/profile">
+                    <i class="bi bi-person-gear"></i> Profile
+                </NavLink>
+            </div>
+        }
+        
+    </nav>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await AuthStateService.InitializeAsync();
+            AuthStateService.OnAuthStateChanged += StateHasChanged;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in NavMenu.OnInitialized: {ex.Message}");
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        try
+        {
+            await AuthService.ClearToken();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in HandleLogout: {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            AuthStateService.OnAuthStateChanged -= StateHasChanged;
+        }
+        catch
+        {
+            // Ignore errors during disposal
+        }
+    }
+}

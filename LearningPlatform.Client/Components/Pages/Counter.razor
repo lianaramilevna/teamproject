@@ -1,0 +1,57 @@
+@page "/counter"
+@rendermode InteractiveServer
+@inject ILogger<Counter> Logger
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter</h1>
+
+<p role="status">Current count: @currentCount</p>
+<p>Is Interactive: @(IsInteractive ? "Yes" : "No")</p>
+
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+<button class="btn btn-secondary" @onclick="TestClick">Test Click</button>
+
+@code {
+    private int currentCount = 0;
+    private bool IsInteractive => true; // This will be true if component is interactive
+
+    protected override void OnInitialized()
+    {
+        Logger.LogInformation("Counter component initialized - RenderMode: InteractiveServer");
+        // #region agent log
+        try { System.IO.File.AppendAllText("/Users/ilnur/team_learn/.cursor/debug.log", System.Text.Json.JsonSerializer.Serialize(new { sessionId = "debug-session", runId = "run2", hypothesisId = "F", location = "Counter.razor:OnInitialized", message = "Counter component initialized", data = new { }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
+        // #endregion
+        base.OnInitialized();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Logger.LogInformation("Counter component rendered for the first time");
+        }
+        base.OnAfterRender(firstRender);
+    }
+
+    private void IncrementCount()
+    {
+        Logger.LogInformation("IncrementCount called - Current count: {Count}", currentCount);
+        // #region agent log
+        try { System.IO.File.AppendAllText("/Users/ilnur/team_learn/.cursor/debug.log", System.Text.Json.JsonSerializer.Serialize(new { sessionId = "debug-session", runId = "run2", hypothesisId = "F", location = "Counter.razor:IncrementCount", message = "Counter button clicked - HANDLER CALLED", data = new { currentCount = currentCount }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
+        // #endregion
+        currentCount++;
+        Logger.LogInformation("Count incremented to: {Count}", currentCount);
+        StateHasChanged();
+        // #region agent log
+        try { System.IO.File.AppendAllText("/Users/ilnur/team_learn/.cursor/debug.log", System.Text.Json.JsonSerializer.Serialize(new { sessionId = "debug-session", runId = "run2", hypothesisId = "F", location = "Counter.razor:IncrementCount", message = "After increment", data = new { currentCount = currentCount }, timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }) + "\n"); } catch { }
+        // #endregion
+    }
+
+    private void TestClick()
+    {
+        Logger.LogInformation("TestClick called");
+        currentCount += 10;
+        StateHasChanged();
+    }
+}

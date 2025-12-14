@@ -1,0 +1,116 @@
+@page "/"
+@rendermode InteractiveServer
+@inject AuthStateService AuthStateService
+@inject NavigationManager Navigation
+
+<PageTitle>Learning Platform - Welcome</PageTitle>
+
+@if (AuthStateService != null && AuthStateService.IsAuthenticated)
+{
+    @* This should not be visible, but show landing if somehow authenticated but not redirected *@
+    <div class="text-center p-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3">Redirecting to courses...</p>
+    </div>
+}
+else
+{
+    @* Landing page for unauthenticated users *@
+    <div class="landing-page">
+        <div class="hero-section">
+            <div class="container">
+                <div class="row align-items-center min-vh-100">
+                    <div class="col-lg-6">
+                        <h1 class="display-4 fw-bold mb-4">
+                            Welcome to <span class="text-primary">Learning Platform</span>
+                        </h1>
+                        <p class="lead mb-4">
+                            A modern educational platform designed to connect students and instructors. 
+                            Create courses, manage assignments, collaborate in teams, and track your progress.
+                        </p>
+                        <div class="d-flex gap-3 flex-wrap">
+                            <a href="/login" class="btn btn-primary btn-lg">
+                                <i class="bi bi-box-arrow-in-right"></i> Sign In
+                            </a>
+                            <a href="/register" class="btn btn-outline-primary btn-lg">
+                                <i class="bi bi-person-plus-fill"></i> Get Started
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="features-grid">
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="bi bi-book-fill"></i>
+                                </div>
+                                <h3>Course Management</h3>
+                                <p>Create and manage courses with ease. Organize your learning materials efficiently.</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="bi bi-clipboard-check-fill"></i>
+                                </div>
+                                <h3>Assignments</h3>
+                                <p>Submit assignments, track deadlines, and receive feedback from instructors.</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="bi bi-people-fill"></i>
+                                </div>
+                                <h3>Team Collaboration</h3>
+                                <p>Work together in teams, collaborate on projects, and learn from peers.</p>
+                            </div>
+                            <div class="feature-card">
+                                <div class="feature-icon">
+                                    <i class="bi bi-graph-up-arrow"></i>
+                                </div>
+                                <h3>Progress Tracking</h3>
+                                <p>Monitor your progress, view grades, and stay on top of your learning journey.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool hasRedirected = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (AuthStateService != null)
+            {
+                await AuthStateService.InitializeAsync();
+                if (AuthStateService.IsAuthenticated && !hasRedirected)
+                {
+                    hasRedirected = true;
+                    StateHasChanged();
+                    // Small delay to show spinner, then redirect
+                    await Task.Delay(300);
+                    Navigation.NavigateTo("/courses", forceLoad: true);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in Home.OnInitialized: {ex.Message}");
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AuthStateService != null && AuthStateService.IsAuthenticated && !hasRedirected)
+        {
+            hasRedirected = true;
+            await Task.Delay(300);
+            Navigation.NavigateTo("/courses", forceLoad: true);
+        }
+    }
+}
+

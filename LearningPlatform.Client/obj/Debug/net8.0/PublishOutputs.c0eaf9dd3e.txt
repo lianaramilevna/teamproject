@@ -1,0 +1,9 @@
+/Users/ilnur/team_learn/LearningPlatform.Client/bin/Debug/net8.0/publish/LearningPlatform.Client
+/Users/ilnur/team_learn/LearningPlatform.Client/bin/Debug/net8.0/publish/appsettings.Development.json
+/Users/ilnur/team_learn/LearningPlatform.Client/bin/Debug/net8.0/publish/appsettings.json
+/Users/ilnur/team_learn/LearningPlatform.Client/bin/Debug/net8.0/publish/LearningPlatform.Client.dll
+/Users/ilnur/team_learn/LearningPlatform.Client/bin/Debug/net8.0/publish/LearningPlatform.Client.deps.json
+/Users/ilnur/team_learn/LearningPlatform.Client/bin/Debug/net8.0/publish/LearningPlatform.Client.runtimeconfig.json
+/Users/ilnur/team_learn/LearningPlatform.Client/bin/Debug/net8.0/publish/LearningPlatform.Client.pdb
+/Users/ilnur/team_learn/LearningPlatform.Client/bin/Debug/net8.0/publish/LearningPlatform.Common.dll
+/Users/ilnur/team_learn/LearningPlatform.Client/bin/Debug/net8.0/publish/LearningPlatform.Common.pdb

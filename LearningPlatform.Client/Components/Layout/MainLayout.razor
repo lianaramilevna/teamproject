@@ -1,0 +1,28 @@
+@inherits LayoutComponentBase
+
+<div class="page">
+    <!-- Top Navigation Bar - Using separate Navbar component -->
+    <Navbar />
+
+    <!-- Main Content -->
+    <main class="main-content">
+        @Body
+    </main>
+</div>
+
+@code {
+    // Navbar is now a separate component, so MainLayout doesn't need auth state management
+}
+
+<div id="blazor-error-ui">
+    <div class="d-flex align-items-center justify-content-between p-3">
+        <div>
+            <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+            <span>An unhandled error has occurred.</span>
+        </div>
+        <div>
+            <a href="" class="btn btn-sm btn-outline-light me-2">Reload</a>
+            <a class="btn btn-sm btn-outline-light dismiss">🗙</a>
+        </div>
+    </div>
+</div>

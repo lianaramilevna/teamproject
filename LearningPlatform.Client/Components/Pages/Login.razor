@@ -1,0 +1,199 @@
+@page "/login"
+@rendermode InteractiveServer
+@inject AuthService AuthService
+@inject AuthStateService AuthStateService
+@inject NavigationManager Navigation
+@inject ILogger<Login> Logger
+
+<PageTitle>Login - Learning Platform</PageTitle>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2><i class="bi bi-box-arrow-in-right"></i> Welcome Back</h2>
+            <p>Sign in to continue your learning journey</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-circle"></i> @errorMessage
+            </div>
+        }
+
+        <EditForm Model="@loginRequest" OnValidSubmit="@HandleLogin" FormName="loginForm">
+            <DataAnnotationsValidator />
+            <div class="mb-4">
+                <label class="form-label">
+                    <i class="bi bi-envelope"></i> Email Address
+                </label>
+                <InputText type="email" @bind-value="loginRequest.Email" class="form-control form-control-lg" placeholder="Enter your email" />
+                <ValidationMessage For="@(() => loginRequest.Email)" />
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">
+                    <i class="bi bi-lock"></i> Password
+                </label>
+                <InputText type="password" @bind-value="loginRequest.Password" class="form-control form-control-lg" placeholder="Enter your password" autocomplete="current-password" />
+                <ValidationMessage For="@(() => loginRequest.Password)" />
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 mb-3" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    <span>Signing in...</span>
+                }
+                else
+                {
+                    <span>Sign In</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="text-center mt-4">
+            <p class="text-muted mb-0">Don't have an account?</p>
+            <a href="/register" class="btn btn-link p-0">Create an account</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginRequest loginRequest = new();
+    private string? errorMessage;
+    private bool isLoading = false;
+    private bool hasCheckedAuth = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("[Login.OnInitializedAsync] Starting initialization. hasCheckedAuth: {HasCheckedAuth}", hasCheckedAuth);
+        // Don't call InitializeAsync here - JSRuntime is not ready during OnInitializedAsync
+        // We'll check in OnAfterRenderAsync instead
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasCheckedAuth && AuthStateService != null)
+        {
+            hasCheckedAuth = true;
+            Logger.LogInformation("[Login.OnAfterRenderAsync] First render, checking auth state");
+            try
+            {
+                await AuthStateService.InitializeAsync();
+                
+                var isAuth = AuthStateService.IsAuthenticated;
+                Logger.LogInformation("[Login.OnAfterRenderAsync] After InitializeAsync. IsAuthenticated: {IsAuth}, CurrentUser: {Email}", 
+                    isAuth, AuthStateService.CurrentUser?.Email ?? "null");
+                
+                if (isAuth)
+                {
+                    Logger.LogInformation("[Login.OnAfterRenderAsync] User is authenticated, redirecting to /courses");
+                    // User is already authenticated, redirect to courses
+                    Navigation.NavigateTo("/courses", forceLoad: true);
+                    return;
+                }
+                else
+                {
+                    Logger.LogInformation("[Login.OnAfterRenderAsync] User is not authenticated, staying on login page");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "[Login.OnAfterRenderAsync] Error checking auth state");
+            }
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        Logger.LogInformation("[Login.HandleLogin] Starting login process for email: {Email}", loginRequest.Email);
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            Logger.LogInformation("[Login.HandleLogin] Calling AuthService.LoginAsync");
+            var response = await AuthService.LoginAsync(loginRequest);
+            
+            Logger.LogInformation("[Login.HandleLogin] AuthService.LoginAsync returned. Response is null: {IsNull}, Token is empty: {TokenEmpty}", 
+                response == null, response?.Token == null || string.IsNullOrEmpty(response.Token));
+            
+            if (response != null && !string.IsNullOrEmpty(response.Token))
+            {
+                Logger.LogInformation("[Login.HandleLogin] Login successful. Token length: {TokenLength}, User: {Email}, Role: {Role}", 
+                    response.Token.Length, response.User?.Email ?? "null", response.Role);
+                
+                // Wait for state to be fully updated in localStorage
+                Logger.LogInformation("[Login.HandleLogin] Waiting 100ms for localStorage to be updated");
+                await Task.Delay(100);
+                
+                // Verify state is updated before redirecting
+                Logger.LogInformation("[Login.HandleLogin] Calling AuthStateService.InitializeAsync to verify state");
+                await AuthStateService.InitializeAsync();
+                
+                var isAuth = AuthStateService.IsAuthenticated;
+                Logger.LogInformation("[Login.HandleLogin] After InitializeAsync. IsAuthenticated: {IsAuth}, CurrentUser: {Email}", 
+                    isAuth, AuthStateService.CurrentUser?.Email ?? "null");
+                
+                if (isAuth)
+                {
+                    Logger.LogInformation("[Login.HandleLogin] State verified. Navigating to /courses");
+                    // Use forceLoad: true to ensure clean navigation and proper component initialization
+                    // MainLayout will read state from localStorage in OnAfterRenderAsync
+                    Navigation.NavigateTo("/courses", forceLoad: true);
+                    Logger.LogInformation("[Login.HandleLogin] Navigation.NavigateTo called with forceLoad: true");
+                    // Don't set isLoading = false here as we're navigating away
+                    return;
+                }
+                else
+                {
+                    Logger.LogWarning("[Login.HandleLogin] State not updated after login, retrying...");
+                    await Task.Delay(200);
+                    Logger.LogInformation("[Login.HandleLogin] Retrying InitializeAsync");
+                    await AuthStateService.InitializeAsync();
+                    
+                    isAuth = AuthStateService.IsAuthenticated;
+                    Logger.LogInformation("[Login.HandleLogin] After retry. IsAuthenticated: {IsAuth}, CurrentUser: {Email}", 
+                        isAuth, AuthStateService.CurrentUser?.Email ?? "null");
+                    
+                    if (isAuth)
+                    {
+                        Logger.LogInformation("[Login.HandleLogin] State verified after retry. Navigating to /courses");
+                        Navigation.NavigateTo("/courses", forceLoad: true);
+                        Logger.LogInformation("[Login.HandleLogin] Navigation.NavigateTo called after retry with forceLoad: true");
+                        // Don't set isLoading = false here as we're navigating away
+                        return;
+                    }
+                    else
+                    {
+                        Logger.LogError("[Login.HandleLogin] State still not updated after retry. Cannot redirect.");
+                        errorMessage = "Login successful but state update failed. Please refresh the page.";
+                    }
+                }
+            }
+            else
+            {
+                Logger.LogWarning("[Login.HandleLogin] Login failed: response is null or token is empty");
+                errorMessage = "Invalid email or password. Please try again.";
+            }
+        }
+        catch (System.Net.Http.HttpRequestException ex)
+        {
+            Logger.LogError(ex, "[Login.HandleLogin] Login error: API connection failed");
+            errorMessage = "Cannot connect to the server. Please make sure the backend is running.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[Login.HandleLogin] Login error: {Message}, StackTrace: {StackTrace}", ex.Message, ex.StackTrace);
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            Logger.LogInformation("[Login.HandleLogin] Login process finished. isLoading set to false");
+            StateHasChanged();
+        }
+    }
+}

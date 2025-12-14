@@ -1,0 +1,171 @@
+@rendermode InteractiveServer
+@inject AuthStateService AuthStateService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject ILogger<Navbar> Logger
+@implements IDisposable
+
+<nav class="navbar navbar-dark bg-primary">
+    <div class="container-fluid navbar-container">
+        <a class="navbar-brand" href="/">
+            <strong><i class="bi bi-mortarboard-fill"></i> Learning Platform</strong>
+        </a>
+        
+        <!-- Navigation links - always visible, not in collapse -->
+        @if (AuthStateService != null && isAuthenticated)
+        {
+            <ul class="navbar-nav navbar-nav-main">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/courses" Match="NavLinkMatch.Prefix">
+                        <i class="bi bi-book-fill"></i> My Courses
+                    </NavLink>
+                </li>
+                
+                @if (AuthStateService.IsInstructor)
+                {
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/courses">
+                            <i class="bi bi-plus-circle"></i> Create Course
+                        </NavLink>
+                    </li>
+                }
+            </ul>
+        }
+        
+        <!-- User menu - always visible on the right -->
+        <ul class="navbar-nav navbar-nav-user">
+            @if (AuthStateService != null && isAuthenticated)
+            {
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle user-menu text-white" href="#" @onclick="ToggleUserMenu" @onclick:preventDefault role="button" aria-expanded="@userMenuOpen" data-bs-toggle="dropdown" aria-haspopup="true">
+                        <i class="bi bi-person-circle"></i> 
+                        <span class="text-white">@(currentUserEmail ?? "User")</span>
+                        @if (currentRole.HasValue)
+                        {
+                            <span class="badge bg-light text-dark ms-2">@currentRole.Value.ToString()</span>
+                        }
+                    </a>
+                    <ul class="dropdown-menu @(userMenuOpen ? "show" : "")" style="position: absolute; right: 0; top: 100%; z-index: 1000;">
+                        <li>
+                            <NavLink class="dropdown-item" href="/profile" @onclick="CloseUserMenu">
+                                <i class="bi bi-person-gear"></i> Profile
+                            </NavLink>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="#" @onclick="HandleLogout" @onclick:preventDefault>
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            }
+        </ul>
+    </div>
+</nav>
+
+@code {
+    private bool userMenuOpen = false;
+    private bool isAuthenticated = false;
+    private string? currentUserEmail;
+    private UserRole? currentRole;
+    private bool hasCheckedAuth = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger?.LogInformation("[Navbar.OnInitializedAsync] Starting");
+        if (AuthStateService != null)
+        {
+            AuthStateService.OnAuthStateChanged += OnAuthStateChanged;
+            Logger?.LogInformation("[Navbar.OnInitializedAsync] Subscribed to OnAuthStateChanged");
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasCheckedAuth && AuthStateService != null)
+        {
+            hasCheckedAuth = true;
+            Logger?.LogInformation("[Navbar.OnAfterRenderAsync] First render, initializing auth state");
+            
+            try
+            {
+                await AuthStateService.InitializeAsync();
+                UpdateState();
+                Logger?.LogInformation("[Navbar.OnAfterRenderAsync] After InitializeAsync. IsAuthenticated: {IsAuth}, User: {Email}", 
+                    isAuthenticated, currentUserEmail ?? "null");
+                
+                StateHasChanged();
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "[Navbar.OnAfterRenderAsync] Error: {Message}", ex.Message);
+            }
+        }
+    }
+    
+    private void UpdateState()
+    {
+        if (AuthStateService != null)
+        {
+            isAuthenticated = AuthStateService.IsAuthenticated;
+            currentUserEmail = AuthStateService.CurrentUser?.Email;
+            currentRole = AuthStateService.CurrentRole;
+            Logger?.LogInformation("[Navbar.UpdateState] IsAuthenticated: {IsAuth}, Email: {Email}, Role: {Role}", 
+                isAuthenticated, currentUserEmail ?? "null", currentRole?.ToString() ?? "null");
+        }
+    }
+    
+    private async void OnAuthStateChanged()
+    {
+        Logger?.LogInformation("[Navbar.OnAuthStateChanged] Event triggered");
+        UpdateState();
+        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleUserMenu()
+    {
+        Logger?.LogInformation("[Navbar.ToggleUserMenu] Called. Current state: userMenuOpen={UserMenuOpen}", userMenuOpen);
+        userMenuOpen = !userMenuOpen;
+        StateHasChanged();
+    }
+
+    private void CloseUserMenu()
+    {
+        Logger?.LogInformation("[Navbar.CloseUserMenu] Called");
+        userMenuOpen = false;
+        StateHasChanged();
+    }
+
+    private async Task HandleLogout()
+    {
+        try
+        {
+            userMenuOpen = false;
+            await AuthService.ClearToken();
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "[Navbar.HandleLogout] Error: {Message}", ex.Message);
+        }
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            if (AuthStateService != null)
+            {
+                AuthStateService.OnAuthStateChanged -= OnAuthStateChanged;
+            }
+        }
+        catch
+        {
+            // Ignore errors during disposal
+        }
+    }
+}
+
