@@ -1,0 +1,17 @@
+/Users/ilnur/team_learn/LearningPlatform.Core/bin/Debug/net8.0/LearningPlatform.Core.deps.json
+/Users/ilnur/team_learn/LearningPlatform.Core/bin/Debug/net8.0/LearningPlatform.Core.dll
+/Users/ilnur/team_learn/LearningPlatform.Core/bin/Debug/net8.0/LearningPlatform.Core.pdb
+/Users/ilnur/team_learn/LearningPlatform.Core/bin/Debug/net8.0/LearningPlatform.Common.dll
+/Users/ilnur/team_learn/LearningPlatform.Core/bin/Debug/net8.0/LearningPlatform.Data.dll
+/Users/ilnur/team_learn/LearningPlatform.Core/bin/Debug/net8.0/LearningPlatform.Common.pdb
+/Users/ilnur/team_learn/LearningPlatform.Core/bin/Debug/net8.0/LearningPlatform.Data.pdb
+/Users/ilnur/team_learn/LearningPlatform.Core/obj/Debug/net8.0/LearningPlatform.Core.csproj.AssemblyReference.cache
+/Users/ilnur/team_learn/LearningPlatform.Core/obj/Debug/net8.0/LearningPlatform.Core.GeneratedMSBuildEditorConfig.editorconfig
+/Users/ilnur/team_learn/LearningPlatform.Core/obj/Debug/net8.0/LearningPlatform.Core.AssemblyInfoInputs.cache
+/Users/ilnur/team_learn/LearningPlatform.Core/obj/Debug/net8.0/LearningPlatform.Core.AssemblyInfo.cs
+/Users/ilnur/team_learn/LearningPlatform.Core/obj/Debug/net8.0/LearningPlatform.Core.csproj.CoreCompileInputs.cache
+/Users/ilnur/team_learn/LearningPlatform.Core/obj/Debug/net8.0/Learning.7F9FFE7A.Up2Date
+/Users/ilnur/team_learn/LearningPlatform.Core/obj/Debug/net8.0/LearningPlatform.Core.dll
+/Users/ilnur/team_learn/LearningPlatform.Core/obj/Debug/net8.0/refint/LearningPlatform.Core.dll
+/Users/ilnur/team_learn/LearningPlatform.Core/obj/Debug/net8.0/LearningPlatform.Core.pdb
+/Users/ilnur/team_learn/LearningPlatform.Core/obj/Debug/net8.0/ref/LearningPlatform.Core.dll
