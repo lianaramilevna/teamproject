@@ -1,0 +1,120 @@
+.page[b-53dx8w0071] {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: #f8f9fa;
+}
+
+.navbar[b-53dx8w0071] {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 0.75rem 1rem;
+}
+
+.navbar-brand[b-53dx8w0071] {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.navbar-nav .nav-link[b-53dx8w0071] {
+    padding: 0.5rem 1rem;
+    transition: all 0.3s ease;
+    border-radius: 6px;
+    margin: 0 0.25rem;
+    background: transparent !important;
+}
+
+.navbar-nav .nav-link:hover[b-53dx8w0071] {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.navbar-nav .nav-link.active[b-53dx8w0071] {
+    background: transparent !important;
+    font-weight: 600;
+}
+
+.navbar-nav .nav-link.active:hover[b-53dx8w0071] {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.user-menu[b-53dx8w0071] {
+    cursor: pointer;
+}
+
+.nav-item.dropdown[b-53dx8w0071] {
+    position: relative;
+}
+
+.dropdown-menu[b-53dx8w0071] {
+    margin-top: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 0;
+    min-width: 200px;
+    background-color: white;
+}
+
+.dropdown-item[b-53dx8w0071] {
+    padding: 0.5rem 1.5rem;
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover[b-53dx8w0071] {
+    background-color: #f8f9fa;
+}
+
+.dropdown-item i[b-53dx8w0071] {
+    margin-right: 0.5rem;
+}
+
+.main-content[b-53dx8w0071] {
+    flex: 1;
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+@media (max-width: 991.98px) {
+    .main-content[b-53dx8w0071] {
+        padding: 1rem;
+    }
+}
+
+#blazor-error-ui[b-53dx8w0071] {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    bottom: 0;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    color: white;
+    border-radius: 8px 8px 0 0;
+}
+
+#blazor-error-ui .dismiss[b-53dx8w0071] {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+    color: white;
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+#blazor-error-ui .dismiss:hover[b-53dx8w0071] {
+    opacity: 0.8;
+}
+
+#blazor-error-ui .reload[b-53dx8w0071] {
+    color: white;
+    text-decoration: underline;
+}
+
+#blazor-error-ui .reload:hover[b-53dx8w0071] {
+    color: #f8f9fa;
+}

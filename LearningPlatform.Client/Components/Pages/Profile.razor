@@ -1,0 +1,208 @@
+@page "/profile"
+@rendermode InteractiveServer
+@inject UsersApiService UsersService
+@inject AuthStateService AuthStateService
+@inject NavigationManager Navigation
+@inject ILogger<Profile> Logger
+
+<PageTitle>Profile - Learning Platform</PageTitle>
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="mb-4">
+                <a href="/courses" class="btn btn-link text-muted mb-2">
+                    <i class="bi bi-arrow-left"></i> Back to Courses
+                </a>
+                <h1 class="mb-3">
+                    <i class="bi bi-person-circle text-primary"></i> My Profile
+                </h1>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-gear"></i> Account Settings
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-circle"></i> @errorMessage
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(successMessage))
+                        {
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle"></i> @successMessage
+                            </div>
+                        }
+
+                        <EditForm Model="@updateRequest" OnValidSubmit="@HandleUpdateProfile" FormName="updateProfileForm">
+                            <DataAnnotationsValidator />
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="bi bi-envelope"></i> Email Address
+                                </label>
+                                <InputText @bind-value="updateRequest.Email" class="form-control form-control-lg" placeholder="Enter new email (leave empty to keep current)" />
+                                <ValidationMessage For="@(() => updateRequest.Email)" />
+                                <small class="text-muted">Current: @(AuthStateService.CurrentUser?.Email ?? "N/A")</small>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="bi bi-lock"></i> New Password
+                                </label>
+                                <InputText type="password" @bind-value="updateRequest.NewPassword" class="form-control form-control-lg" placeholder="Enter new password (leave empty to keep current)" autocomplete="new-password" />
+                                <ValidationMessage For="@(() => updateRequest.NewPassword)" />
+                                <small class="text-muted">Leave empty if you don't want to change password</small>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="bi bi-shield-lock"></i> Current Password <span class="text-danger">*</span>
+                                </label>
+                                <InputText type="password" @bind-value="updateRequest.CurrentPassword" class="form-control form-control-lg" placeholder="Enter your current password" autocomplete="current-password" />
+                                <ValidationMessage For="@(() => updateRequest.CurrentPassword)" />
+                                <small class="text-muted">Required to confirm changes</small>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1" disabled="@isUpdating">
+                                    @if (isUpdating)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Updating...</span>
+                                    }
+                                    else
+                                    {
+                                        <span><i class="bi bi-save"></i> Update Profile</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn btn-secondary" @onclick='() => Navigation.NavigateTo("/courses")'>Cancel</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private UpdateProfileRequest updateRequest = new();
+    private bool isLoading = true;
+    private bool isUpdating = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private bool hasCheckedAuth = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("[Profile.OnInitializedAsync] Starting");
+        // Don't call InitializeAsync here - JSRuntime is not ready during OnInitializedAsync
+        // We'll check in OnAfterRenderAsync instead
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasCheckedAuth)
+        {
+            hasCheckedAuth = true;
+            Logger.LogInformation("[Profile.OnAfterRenderAsync] First render, checking auth state");
+            
+            try
+            {
+                await AuthStateService.InitializeAsync();
+                
+                var isAuth = AuthStateService.IsAuthenticated;
+                Logger.LogInformation("[Profile.OnAfterRenderAsync] After InitializeAsync. IsAuthenticated: {IsAuth}", isAuth);
+                
+                // Redirect to login if not authenticated
+                if (!isAuth)
+                {
+                    Logger.LogInformation("[Profile.OnAfterRenderAsync] Not authenticated, waiting 100ms and retrying");
+                    await Task.Delay(100);
+                    await AuthStateService.InitializeAsync();
+                    
+                    isAuth = AuthStateService.IsAuthenticated;
+                    if (!isAuth)
+                    {
+                        Logger.LogWarning("[Profile.OnAfterRenderAsync] Still not authenticated, redirecting to /login");
+                        Navigation.NavigateTo("/login", forceLoad: true);
+                        return;
+                    }
+                }
+                
+                isLoading = false;
+                // Pre-fill current email
+                if (AuthStateService.CurrentUser != null)
+                {
+                    updateRequest.Email = AuthStateService.CurrentUser.Email;
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "[Profile.OnAfterRenderAsync] Error checking auth state");
+                isLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async Task HandleUpdateProfile()
+    {
+        isUpdating = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            // If email is same as current, set to null
+            if (updateRequest.Email == AuthStateService.CurrentUser?.Email)
+            {
+                updateRequest.Email = null;
+            }
+
+            // If new password is empty, set to null
+            if (string.IsNullOrWhiteSpace(updateRequest.NewPassword))
+            {
+                updateRequest.NewPassword = null;
+            }
+
+            var result = await UsersService.UpdateProfileAsync(updateRequest);
+            if (result != null)
+            {
+                successMessage = "Profile updated successfully!";
+                // Update auth state
+                if (AuthStateService.CurrentUser != null)
+                {
+                    AuthStateService.CurrentUser.Email = result.Email;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating profile");
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isUpdating = false;
+        }
+    }
+}
+

@@ -1,0 +1,118 @@
+@page "/submissions/{SubmissionId:guid}/grade"
+@rendermode InteractiveServer
+@inject SubmissionsApiService SubmissionsService
+@inject NavigationManager Navigation
+@inject ILogger<GradeSubmission> Logger
+@using Microsoft.AspNetCore.WebUtilities
+
+<PageTitle>Grade Submission - Learning Platform</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Grade Submission</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <p><strong>Submission ID:</strong> @SubmissionId</p>
+                    </div>
+
+                    <EditForm Model="@gradeRequest" OnValidSubmit="@HandleGrade" FormName="gradeSubmissionForm">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Grade (0-100)</label>
+                            <InputNumber @bind-value="gradeRequest.Grade" class="form-control" min="0" max="100" />
+                            <ValidationMessage For="@(() => gradeRequest.Grade)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Comment</label>
+                            <InputTextArea @bind-value="gradeRequest.Comment" class="form-control" rows="5" />
+                        </div>
+                        <button type="submit" class="btn btn-primary" disabled="@isGrading">@(isGrading ? "Grading..." : "Submit Grade")</button>
+                        <button type="button" class="btn btn-secondary ms-2" @onclick="HandleCancel">Cancel</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid SubmissionId { get; set; }
+
+    private bool isGrading = false;
+    private GradeSubmissionRequest gradeRequest = new();
+    private Guid? courseId = null;
+
+    protected override Task OnInitializedAsync()
+    {
+        // Get courseId from query string
+        var uri = new Uri(Navigation.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("courseId", out var courseIdValue))
+        {
+            if (Guid.TryParse(courseIdValue, out var cid))
+            {
+                courseId = cid;
+                Logger.LogInformation("CourseId from query: {CourseId}", courseId);
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleGrade()
+    {
+        if (gradeRequest.Grade < 0 || gradeRequest.Grade > 100)
+        {
+            return;
+        }
+
+        isGrading = true;
+        StateHasChanged();
+        try
+        {
+            var result = await SubmissionsService.GradeSubmissionAsync(SubmissionId, gradeRequest);
+            if (result != null)
+            {
+                Logger.LogInformation("Grade submitted successfully. SubmissionId: {SubmissionId}, Grade: {Grade}, CourseId: {CourseId}", 
+                    SubmissionId, gradeRequest.Grade, courseId);
+                // Navigate back to course page if courseId is available, otherwise to courses list
+                await Task.Delay(100); // Small delay to ensure UI updates
+                if (courseId.HasValue)
+                {
+                    Navigation.NavigateTo($"/courses/{courseId.Value}", forceLoad: true);
+                }
+                else
+                {
+                    Navigation.NavigateTo("/courses", forceLoad: true);
+                }
+            }
+            else
+            {
+                Logger.LogWarning("Grade submission returned null. SubmissionId: {SubmissionId}", SubmissionId);
+                isGrading = false;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error grading submission. SubmissionId: {SubmissionId}", SubmissionId);
+            isGrading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleCancel()
+    {
+        if (courseId.HasValue)
+        {
+            Navigation.NavigateTo($"/courses/{courseId.Value}", forceLoad: true);
+        }
+        else
+        {
+            Navigation.NavigateTo("/courses", forceLoad: true);
+        }
+    }
+}
+

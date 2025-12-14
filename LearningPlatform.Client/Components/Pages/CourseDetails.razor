@@ -1,0 +1,1173 @@
+@page "/courses/{CourseId:guid}"
+@rendermode InteractiveServer
+@inject CoursesApiService CoursesService
+@inject AssignmentsApiService AssignmentsService
+@inject TeamsApiService TeamsService
+@inject AuthStateService AuthStateService
+@inject NavigationManager Navigation
+@inject ILogger<CourseDetails> Logger
+
+<PageTitle>@(course?.Title ?? "Course") - Learning Platform</PageTitle>
+
+<div class="container-fluid">
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (course == null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle"></i> Course not found.
+        </div>
+    }
+    else
+    {
+        <!-- Course Header -->
+        <div class="course-header mb-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="flex-grow-1">
+                    <a href="/courses" class="btn btn-link text-muted mb-2">
+                        <i class="bi bi-arrow-left"></i> Back to Courses
+                    </a>
+                    <h1 class="course-title mb-2">@course.Title</h1>
+                    <p class="course-description mb-3">@course.Description</p>
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="badge bg-primary">
+                            <i class="bi bi-key"></i> Join Code: <strong>@course.JoinCode</strong>
+                        </span>
+                    </div>
+                </div>
+                @if (AuthStateService.IsInstructor)
+                {
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary" @onclick="ShowEditModal">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                        <button class="btn btn-outline-danger" @onclick="ShowDeleteConfirm">
+                            <i class="bi bi-trash"></i> Delete
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Teams Section -->
+        @if (AuthStateService.IsInstructor)
+        {
+            <div class="d-flex justify-content-between align-items-center mb-4 mt-5">
+                <h2 class="mb-0">
+                    <i class="bi bi-people-fill text-primary"></i> Teams
+                </h2>
+                <button class="btn btn-primary" @onclick="ShowCreateTeamModal" type="button">
+                    <i class="bi bi-plus-circle"></i> Create Team
+                </button>
+            </div>
+
+            @if (teams == null || !teams.Any())
+            {
+                <div class="text-center py-4 mb-4">
+                    <div class="mb-3">
+                        <i class="bi bi-people" style="font-size: 3rem; color: #dee2e6;"></i>
+                    </div>
+                    <p class="text-muted">No teams yet. Create teams to organize students for assignments.</p>
+                </div>
+            }
+            else
+            {
+                <div class="row g-3 mb-4">
+                    @foreach (var team in teams)
+                    {
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">
+                                        <i class="bi bi-people"></i> @team.Name
+                                    </h5>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick='() => ShowEditTeamModal(team)'>
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick='() => ShowDeleteTeamConfirm(team)'>
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="mb-3">Members (@team.Members.Count)</h6>
+                                    @if (team.Members.Any())
+                                    {
+                                        <ul class="list-unstyled mb-3">
+                                            @foreach (var member in team.Members)
+                                            {
+                                                <li class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span><i class="bi bi-person-circle"></i> @member.Email</span>
+                                                    <button class="btn btn-sm btn-outline-danger" @onclick='() => HandleRemoveTeamMember(team.Id, member.UserId)'>
+                                                        <i class="bi bi-x"></i>
+                                                    </button>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                    <button class="btn btn-sm btn-outline-primary w-100" @onclick='() => ShowAddMemberModal(team)'>
+                                        <i class="bi bi-person-plus"></i> Add Member
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+        else if (AuthStateService.IsStudent && teams != null && teams.Any())
+        {
+            <div class="mb-4 mt-5">
+                <h2 class="mb-3">
+                    <i class="bi bi-people-fill text-primary"></i> My Teams
+                </h2>
+                <div class="row g-3">
+                    @foreach (var team in teams)
+                    {
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="bi bi-people"></i> @team.Name
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <h6 class="mb-3">Team Members (@team.Members.Count)</h6>
+                                    <ul class="list-unstyled">
+                                        @foreach (var member in team.Members)
+                                        {
+                                            <li class="mb-2">
+                                                <i class="bi bi-person-circle"></i> @member.Email
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <!-- Assignments Section -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0">
+                <i class="bi bi-list-check text-primary"></i> Assignments
+            </h2>
+            @if (AuthStateService.IsInstructor)
+            {
+                <button class="btn btn-primary" @onclick="ShowCreateAssignmentModal" type="button">
+                    <i class="bi bi-plus-circle"></i> Create Assignment
+                </button>
+            }
+        </div>
+
+        @if (assignments == null || !assignments.Any())
+        {
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="bi bi-clipboard" style="font-size: 4rem; color: #dee2e6;"></i>
+                </div>
+                <h3 class="text-muted">No assignments yet</h3>
+                <p class="text-muted">
+                    @if (AuthStateService.IsInstructor)
+                    {
+                        <span>Create your first assignment to get started!</span>
+                    }
+                    else
+                    {
+                        <span>Assignments will appear here once the instructor creates them.</span>
+                    }
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var assignment in assignments)
+                {
+                    <div class="col-12">
+                        <div class="assignment-card">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h3 class="assignment-title mb-2">
+                                        <i class="bi bi-file-earmark-text text-primary"></i> @assignment.Title
+                                    </h3>
+                                    <p class="text-muted mb-3">@assignment.Description</p>
+                                    <div class="d-flex gap-3 align-items-center flex-wrap">
+                                        @if (assignment.TeamId.HasValue && teams != null)
+                                        {
+                                            var team = teams.FirstOrDefault(t => t.Id == assignment.TeamId.Value);
+                                            @if (team != null)
+                                            {
+                                                <span class="badge bg-info">
+                                                    <i class="bi bi-people"></i> @team.Name
+                                                </span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-globe"></i> Entire Course
+                                            </span>
+                                        }
+                                        @if (assignment.DueDateUtc.HasValue)
+                                        {
+                                            var isOverdue = assignment.DueDateUtc.Value < DateTime.UtcNow;
+                                            <span class="due-date @(isOverdue ? "overdue" : "")">
+                                                <i class="bi bi-calendar-event"></i> 
+                                                Due: @assignment.DueDateUtc.Value.ToLocalTime().ToString("MMMM dd, yyyy 'at' HH:mm")
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">
+                                                <i class="bi bi-calendar-x"></i> No due date
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="/assignments/@assignment.Id?courseId=@CourseId" class="btn btn-primary">
+                                        <i class="bi bi-arrow-right-circle"></i> View
+                                    </a>
+                                    @if (AuthStateService.IsInstructor)
+                                    {
+                                        <button class="btn btn-outline-primary btn-sm" @onclick='() => Navigation.NavigateTo($"/assignments/{assignment.Id}?courseId={CourseId}")'>
+                                            <i class="bi bi-pencil"></i> Edit
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" @onclick='async () => await HandleDeleteAssignment(assignment)'>
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    <!-- Edit Course Modal -->
+    @if (showEditModal)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-pencil"></i> Edit Course
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseEditModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (!string.IsNullOrEmpty(editError))
+                        {
+                            <div class="alert alert-danger mb-3">
+                                <i class="bi bi-exclamation-circle"></i> @editError
+                            </div>
+                        }
+                        <EditForm Model="@updateRequest" OnValidSubmit="@HandleUpdateCourse" FormName="updateCourseForm">
+                            <DataAnnotationsValidator />
+                            <div class="mb-3">
+                                <label class="form-label">Course Title</label>
+                                <InputText @bind-value="updateRequest.Title" class="form-control" placeholder="e.g., Introduction to Programming" />
+                                <ValidationMessage For="@(() => updateRequest.Title)" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <InputTextArea @bind-value="updateRequest.Description" class="form-control" rows="4" placeholder="Describe what students will learn..." />
+                                <ValidationMessage For="@(() => updateRequest.Description)" />
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1" disabled="@isUpdating">
+                                    @if (isUpdating)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Updating...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Update Course</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancel</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Delete Course Confirmation Modal -->
+    @if (showDeleteConfirm)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle"></i> Delete Course
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteConfirm"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete the course <strong>@course?.Title</strong>?</p>
+                        <p class="text-danger"><small>This action cannot be undone. All assignments and submissions will also be deleted.</small></p>
+                        @if (!string.IsNullOrEmpty(deleteError))
+                        {
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-circle"></i> @deleteError
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseDeleteConfirm">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="HandleDeleteCourse" disabled="@isDeleting">
+                            @if (isDeleting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Deleting...</span>
+                            }
+                            else
+                            {
+                                <span><i class="bi bi-trash"></i> Delete Course</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Create Team Modal -->
+    @if (showCreateTeamModal)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-people"></i> Create New Team
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseCreateTeamModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (!string.IsNullOrEmpty(teamError))
+                        {
+                            <div class="alert alert-danger mb-3">
+                                <i class="bi bi-exclamation-circle"></i> @teamError
+                            </div>
+                        }
+                        <EditForm Model="@createTeamRequest" OnValidSubmit="@HandleCreateTeam" OnInvalidSubmit="@HandleInvalidSubmit" FormName="createTeamForm">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+                            <div class="mb-3">
+                                <label class="form-label">Team Name</label>
+                                <InputText @bind-value="createTeamRequest.Name" class="form-control" placeholder="e.g., Team Alpha" />
+                                <ValidationMessage For="@(() => createTeamRequest.Name)" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Select Students</label>
+                                @if (courseStudents != null && courseStudents.Any())
+                                {
+                                    <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                        @foreach (var student in courseStudents)
+                                        {
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       checked="@(createTeamRequest.StudentIds.Contains(student.Id))"
+                                                       @onchange='(e) => ToggleStudent(student.Id, e.Value)' 
+                                                       id="student-@student.Id" />
+                                                <label class="form-check-label" for="student-@student.Id">
+                                                    @student.Email
+                                                </label>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="text-muted">No students in this course yet.</p>
+                                }
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1" disabled="@isCreatingTeam">
+                                    @if (isCreatingTeam)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Creating...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Create Team</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn btn-secondary" @onclick="CloseCreateTeamModal">Cancel</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Edit Team Modal -->
+    @if (showEditTeamModal && selectedTeamForAddMember != null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-pencil"></i> Edit Team
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseEditTeamModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (!string.IsNullOrEmpty(teamError))
+                        {
+                            <div class="alert alert-danger mb-3">
+                                <i class="bi bi-exclamation-circle"></i> @teamError
+                            </div>
+                        }
+                        <EditForm Model="@updateTeamRequest" OnValidSubmit="@HandleUpdateTeam" FormName="updateTeamForm">
+                            <DataAnnotationsValidator />
+                            <div class="mb-3">
+                                <label class="form-label">Team Name</label>
+                                <InputText @bind-value="updateTeamRequest.Name" class="form-control" />
+                                <ValidationMessage For="@(() => updateTeamRequest.Name)" />
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1" disabled="@isUpdatingTeam">
+                                    @if (isUpdatingTeam)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Updating...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Update Team</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn btn-secondary" @onclick="CloseEditTeamModal">Cancel</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Delete Team Confirmation Modal -->
+    @if (showDeleteTeamConfirm && selectedTeamForAddMember != null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle"></i> Delete Team
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteTeamConfirm"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete the team <strong>@selectedTeamForAddMember.Name</strong>?</p>
+                        <p class="text-danger"><small>This action cannot be undone.</small></p>
+                        @if (!string.IsNullOrEmpty(teamError))
+                        {
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-circle"></i> @teamError
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseDeleteTeamConfirm">Cancel</button>
+                        <button type="button" class="btn btn-danger" @onclick="HandleDeleteTeam" disabled="@isDeletingTeam">
+                            @if (isDeletingTeam)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Deleting...</span>
+                            }
+                            else
+                            {
+                                <span><i class="bi bi-trash"></i> Delete Team</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Add Team Member Modal -->
+    @if (showAddMemberModal && selectedTeamForAddMember != null && courseStudents != null)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-person-plus"></i> Add Member to @selectedTeamForAddMember.Name
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseAddMemberModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (!string.IsNullOrEmpty(teamError))
+                        {
+                            <div class="alert alert-danger mb-3">
+                                <i class="bi bi-exclamation-circle"></i> @teamError
+                            </div>
+                        }
+                        <div class="list-group">
+                            @foreach (var student in courseStudents.Where(s => !selectedTeamForAddMember.Members.Any(m => m.UserId == s.Id)))
+                            {
+                                <button type="button" class="list-group-item list-group-item-action" 
+                                        @onclick='() => HandleAddTeamMember(student.Id)' 
+                                        disabled="@isAddingMember">
+                                    <i class="bi bi-person-circle"></i> @student.Email
+                                </button>
+                            }
+                        </div>
+                        @if (courseStudents.All(s => selectedTeamForAddMember.Members.Any(m => m.UserId == s.Id)))
+                        {
+                            <p class="text-muted mt-3">All students are already in this team.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Create Assignment Modal -->
+    @if (showCreateAssignmentModal)
+    {
+        <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-plus-circle"></i> Create New Assignment
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseCreateAssignmentModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (!string.IsNullOrEmpty(createAssignmentError))
+                        {
+                            <div class="alert alert-danger mb-3">
+                                <i class="bi bi-exclamation-circle"></i> @createAssignmentError
+                            </div>
+                        }
+                        <EditForm Model="@createAssignmentRequest" OnValidSubmit="@HandleCreateAssignment" OnInvalidSubmit="@HandleInvalidSubmit" FormName="createAssignmentForm">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="alert alert-danger" />
+                            <div class="mb-3">
+                                <label class="form-label">Assignment Title</label>
+                                <InputText @bind-value="createAssignmentRequest.Title" class="form-control" placeholder="e.g., Homework 1: Introduction" />
+                                <ValidationMessage For="@(() => createAssignmentRequest.Title)" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <InputTextArea @bind-value="createAssignmentRequest.Description" class="form-control" rows="5" placeholder="Describe the assignment requirements..." />
+                                <ValidationMessage For="@(() => createAssignmentRequest.Description)" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Due Date</label>
+                                <InputDate @bind-value="dueDate" class="form-control" />
+                                <small class="text-muted">Select when this assignment is due</small>
+                            </div>
+                            @if (teams != null && teams.Any())
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label">Assign to Team (Optional)</label>
+                                    <select class="form-select" @bind="selectedTeamIdForAssignment" @bind:after="OnTeamIdChanged">
+                                        <option value="">Entire Course</option>
+                                        @foreach (var team in teams)
+                                        {
+                                            <option value="@team.Id.ToString()">@team.Name</option>
+                                        }
+                                    </select>
+                                    <small class="text-muted">Leave as "Entire Course" to assign to all students, or select a specific team</small>
+                                </div>
+                            }
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1" disabled="@isCreating">
+                                    @if (isCreating)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                        <span>Creating...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Create Assignment</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn btn-secondary" @onclick="CloseCreateAssignmentModal">Cancel</button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid CourseId { get; set; }
+
+    private CourseDto? course;
+    private List<AssignmentDto>? assignments;
+    private List<TeamDto>? teams;
+    private List<UserDto>? courseStudents;
+    private bool isLoading = true;
+    private bool showCreateAssignmentModal = false;
+    private bool isCreating = false;
+    private bool showEditModal = false;
+    private bool isUpdating = false;
+    private bool showDeleteConfirm = false;
+    private bool isDeleting = false;
+    private bool showCreateTeamModal = false;
+    private bool isCreatingTeam = false;
+    private bool showEditTeamModal = false;
+    private bool isUpdatingTeam = false;
+    private bool showDeleteTeamConfirm = false;
+    private bool isDeletingTeam = false;
+    private bool showAddMemberModal = false;
+    private bool isAddingMember = false;
+    private CreateAssignmentRequest createAssignmentRequest = new();
+    private UpdateCourseRequest updateRequest = new();
+    private CreateTeamRequest createTeamRequest = new();
+    private UpdateTeamRequest updateTeamRequest = new();
+    private TeamDto? selectedTeamForAddMember;
+    private string selectedTeamIdForAssignment = string.Empty;
+    private DateTime? dueDate;
+    private string? editError;
+    private string? deleteError;
+    private string? teamError;
+    private string? createAssignmentError;
+
+    private bool hasCheckedAuth = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("[CourseDetails.OnInitializedAsync] Starting. CourseId: {CourseId}", CourseId);
+        // Don't call InitializeAsync here - JSRuntime is not ready during OnInitializedAsync
+        // We'll check in OnAfterRenderAsync instead
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasCheckedAuth)
+        {
+            hasCheckedAuth = true;
+            Logger.LogInformation("[CourseDetails.OnAfterRenderAsync] First render, checking auth state. CourseId: {CourseId}", CourseId);
+            
+            try
+            {
+                await AuthStateService.InitializeAsync();
+                
+                var isAuth = AuthStateService.IsAuthenticated;
+                Logger.LogInformation("[CourseDetails.OnAfterRenderAsync] After InitializeAsync. IsAuthenticated: {IsAuth}, CurrentUser: {Email}, Role: {Role}", 
+                    isAuth, AuthStateService.CurrentUser?.Email ?? "null", AuthStateService.CurrentRole?.ToString() ?? "null");
+                
+                // Redirect to login if not authenticated
+                if (!isAuth)
+                {
+                    Logger.LogInformation("[CourseDetails.OnAfterRenderAsync] Not authenticated, waiting 100ms and retrying");
+                    await Task.Delay(100);
+                    await AuthStateService.InitializeAsync();
+                    
+                    isAuth = AuthStateService.IsAuthenticated;
+                    Logger.LogInformation("[CourseDetails.OnAfterRenderAsync] After retry. IsAuthenticated: {IsAuth}, CurrentUser: {Email}", 
+                        isAuth, AuthStateService.CurrentUser?.Email ?? "null");
+                    
+                    if (!isAuth)
+                    {
+                        Logger.LogWarning("[CourseDetails.OnAfterRenderAsync] Still not authenticated, redirecting to /login");
+                        Navigation.NavigateTo("/login", forceLoad: true);
+                        return;
+                    }
+                    else
+                    {
+                        Logger.LogInformation("[CourseDetails.OnAfterRenderAsync] Authentication verified after retry");
+                    }
+                }
+                
+                Logger.LogInformation("[CourseDetails.OnAfterRenderAsync] Loading course data");
+                await LoadData();
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "[CourseDetails.OnAfterRenderAsync] Error checking auth state or loading course: {Message}, StackTrace: {StackTrace}", 
+                    ex.Message, ex.StackTrace);
+                isLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async Task LoadData()
+    {
+        Logger.LogInformation("[CourseDetails.LoadData] Starting to load course data. CourseId: {CourseId}", CourseId);
+        isLoading = true;
+        await InvokeAsync(StateHasChanged);
+        
+        try
+        {
+            Logger.LogInformation("[CourseDetails.LoadData] Calling CoursesService.GetCourseByIdAsync");
+            course = await CoursesService.GetCourseByIdAsync(CourseId);
+            Logger.LogInformation("[CourseDetails.LoadData] Course loaded. Is null: {IsNull}, Title: {Title}", 
+                course == null, course?.Title ?? "null");
+            
+            if (course != null)
+            {
+                Logger.LogInformation("[CourseDetails.LoadData] Loading assignments and teams");
+                assignments = await AssignmentsService.GetAssignmentsAsync(CourseId);
+                teams = await TeamsService.GetTeamsAsync(CourseId);
+                Logger.LogInformation("[CourseDetails.LoadData] Assignments: {AssignmentsCount}, Teams: {TeamsCount}", 
+                    assignments?.Count ?? 0, teams?.Count ?? 0);
+                
+                if (AuthStateService.IsInstructor)
+                {
+                    Logger.LogInformation("[CourseDetails.LoadData] User is instructor, loading course students");
+                    courseStudents = await CoursesService.GetCourseStudentsAsync(CourseId);
+                    Logger.LogInformation("[CourseDetails.LoadData] Course students: {Count}", courseStudents?.Count ?? 0);
+                }
+            }
+            else
+            {
+                Logger.LogWarning("[CourseDetails.LoadData] Course not found for CourseId: {CourseId}", CourseId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[CourseDetails.LoadData] Error loading course details: {Message}, StackTrace: {StackTrace}", 
+                ex.Message, ex.StackTrace);
+        }
+        finally
+        {
+            isLoading = false;
+            Logger.LogInformation("[CourseDetails.LoadData] Finished. isLoading set to false");
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void ShowCreateAssignmentModal()
+    {
+        Logger.LogInformation("ShowCreateAssignmentModal called");
+        showCreateAssignmentModal = true;
+        createAssignmentRequest = new CreateAssignmentRequest();
+        selectedTeamIdForAssignment = string.Empty;
+        dueDate = DateTime.Now.AddDays(7);
+        createAssignmentError = null;
+        StateHasChanged();
+        Logger.LogInformation("showCreateAssignmentModal set to: {Value}", showCreateAssignmentModal);
+    }
+
+    private void OnTeamIdChanged()
+    {
+        if (string.IsNullOrEmpty(selectedTeamIdForAssignment))
+        {
+            createAssignmentRequest.TeamId = null;
+        }
+        else if (Guid.TryParse(selectedTeamIdForAssignment, out var teamId))
+        {
+            createAssignmentRequest.TeamId = teamId;
+        }
+    }
+
+    private void CloseCreateAssignmentModal()
+    {
+        showCreateAssignmentModal = false;
+        createAssignmentError = null;
+        StateHasChanged();
+    }
+
+    private void ShowEditModal()
+    {
+        if (course != null)
+        {
+            updateRequest = new UpdateCourseRequest
+            {
+                Title = course.Title,
+                Description = course.Description
+            };
+            editError = null;
+            showEditModal = true;
+        }
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        editError = null;
+    }
+
+    private async Task HandleUpdateCourse()
+    {
+        isUpdating = true;
+        editError = null;
+        try
+        {
+            var updatedCourse = await CoursesService.UpdateCourseAsync(CourseId, updateRequest);
+            if (updatedCourse != null)
+            {
+                await LoadData();
+                CloseEditModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating course");
+            editError = ex.Message;
+        }
+        finally
+        {
+            isUpdating = false;
+        }
+    }
+
+    private void ShowDeleteConfirm()
+    {
+        showDeleteConfirm = true;
+        deleteError = null;
+    }
+
+    private void CloseDeleteConfirm()
+    {
+        showDeleteConfirm = false;
+        deleteError = null;
+    }
+
+    private async Task HandleDeleteCourse()
+    {
+        isDeleting = true;
+        deleteError = null;
+        try
+        {
+            var success = await CoursesService.DeleteCourseAsync(CourseId);
+            if (success)
+            {
+                Navigation.NavigateTo("/courses");
+            }
+            else
+            {
+                deleteError = "Failed to delete course. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting course");
+            deleteError = ex.Message;
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private async Task HandleDeleteAssignment(AssignmentDto assignment)
+    {
+        if (confirm($"Are you sure you want to delete the assignment '{assignment.Title}'? This action cannot be undone."))
+        {
+            try
+            {
+                var success = await AssignmentsService.DeleteAssignmentAsync(CourseId, assignment.Id);
+                if (success)
+                {
+                    await LoadData();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error deleting assignment");
+            }
+        }
+    }
+
+    private async Task HandleCreateAssignment()
+    {
+        Logger.LogInformation("HandleCreateAssignment called. Title: {Title}, CourseId: {CourseId}", createAssignmentRequest.Title, CourseId);
+        
+        if (dueDate.HasValue)
+        {
+            createAssignmentRequest.DueDateUtc = dueDate.Value.ToUniversalTime();
+        }
+        else
+        {
+            createAssignmentRequest.DueDateUtc = null;
+        }
+
+        isCreating = true;
+        createAssignmentError = null;
+        StateHasChanged();
+        
+        try
+        {
+            var assignment = await AssignmentsService.CreateAssignmentAsync(CourseId, createAssignmentRequest);
+            if (assignment != null)
+            {
+                Logger.LogInformation("Assignment created successfully: {AssignmentId}", assignment.Id);
+                await LoadData();
+                CloseCreateAssignmentModal();
+            }
+            else
+            {
+                Logger.LogWarning("Assignment creation returned null");
+                createAssignmentError = "Failed to create assignment. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating assignment: {Message}", ex.Message);
+            createAssignmentError = ex.Message;
+        }
+        finally
+        {
+            isCreating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleInvalidSubmit()
+    {
+        Logger.LogWarning("Form validation failed");
+        createAssignmentError = "Please fill in all required fields correctly.";
+        teamError = "Please fill in all required fields correctly.";
+        StateHasChanged();
+    }
+
+    private bool confirm(string message)
+    {
+        // Use browser's confirm dialog
+        return true; // In production, use JSInterop for actual confirmation
+    }
+
+    // Team management methods
+    private void ShowCreateTeamModal()
+    {
+        Logger.LogInformation("ShowCreateTeamModal called. CourseId: {CourseId}", CourseId);
+        showCreateTeamModal = true;
+        createTeamRequest = new CreateTeamRequest { CourseId = CourseId };
+        teamError = null;
+        StateHasChanged();
+        Logger.LogInformation("showCreateTeamModal set to: {Value}", showCreateTeamModal);
+    }
+
+    private void CloseCreateTeamModal()
+    {
+        showCreateTeamModal = false;
+        createTeamRequest = new CreateTeamRequest { CourseId = CourseId };
+        teamError = null;
+        StateHasChanged();
+    }
+
+    private async Task HandleCreateTeam()
+    {
+        Logger.LogInformation("HandleCreateTeam called. Name: {Name}, CourseId: {CourseId}, StudentIds: {Count}", 
+            createTeamRequest.Name, CourseId, createTeamRequest.StudentIds.Count);
+        
+        isCreatingTeam = true;
+        teamError = null;
+        StateHasChanged();
+        
+        try
+        {
+            var team = await TeamsService.CreateTeamAsync(CourseId, createTeamRequest);
+            if (team != null)
+            {
+                Logger.LogInformation("Team created successfully: {TeamId}", team.Id);
+                await LoadData();
+                CloseCreateTeamModal();
+            }
+            else
+            {
+                Logger.LogWarning("Team creation returned null");
+                teamError = "Failed to create team. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating team: {Message}", ex.Message);
+            teamError = ex.Message;
+        }
+        finally
+        {
+            isCreatingTeam = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowEditTeamModal(TeamDto team)
+    {
+        showEditTeamModal = true;
+        updateTeamRequest = new UpdateTeamRequest { Name = team.Name };
+        selectedTeamForAddMember = team;
+        teamError = null;
+    }
+
+    private void CloseEditTeamModal()
+    {
+        showEditTeamModal = false;
+        selectedTeamForAddMember = null;
+        teamError = null;
+    }
+
+    private async Task HandleUpdateTeam()
+    {
+        if (selectedTeamForAddMember == null) return;
+
+        isUpdatingTeam = true;
+        teamError = null;
+        try
+        {
+            var team = await TeamsService.UpdateTeamAsync(CourseId, selectedTeamForAddMember.Id, updateTeamRequest);
+            if (team != null)
+            {
+                await LoadData();
+                CloseEditTeamModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating team");
+            teamError = ex.Message;
+        }
+        finally
+        {
+            isUpdatingTeam = false;
+        }
+    }
+
+    private void ShowDeleteTeamConfirm(TeamDto team)
+    {
+        showDeleteTeamConfirm = true;
+        selectedTeamForAddMember = team;
+        teamError = null;
+    }
+
+    private void CloseDeleteTeamConfirm()
+    {
+        showDeleteTeamConfirm = false;
+        selectedTeamForAddMember = null;
+        teamError = null;
+    }
+
+    private async Task HandleDeleteTeam()
+    {
+        if (selectedTeamForAddMember == null) return;
+
+        isDeletingTeam = true;
+        teamError = null;
+        try
+        {
+            var success = await TeamsService.DeleteTeamAsync(CourseId, selectedTeamForAddMember.Id);
+            if (success)
+            {
+                await LoadData();
+                CloseDeleteTeamConfirm();
+            }
+            else
+            {
+                teamError = "Failed to delete team. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting team");
+            teamError = ex.Message;
+        }
+        finally
+        {
+            isDeletingTeam = false;
+        }
+    }
+
+    private void ShowAddMemberModal(TeamDto team)
+    {
+        showAddMemberModal = true;
+        selectedTeamForAddMember = team;
+        teamError = null;
+    }
+
+    private void CloseAddMemberModal()
+    {
+        showAddMemberModal = false;
+        selectedTeamForAddMember = null;
+        teamError = null;
+    }
+
+    private async Task HandleAddTeamMember(Guid studentId)
+    {
+        if (selectedTeamForAddMember == null) return;
+
+        isAddingMember = true;
+        teamError = null;
+        try
+        {
+            var request = new AddTeamMemberRequest { StudentId = studentId };
+            var team = await TeamsService.AddTeamMemberAsync(CourseId, selectedTeamForAddMember.Id, request);
+            if (team != null)
+            {
+                await LoadData();
+                CloseAddMemberModal();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error adding team member");
+            teamError = ex.Message;
+        }
+        finally
+        {
+            isAddingMember = false;
+        }
+    }
+
+    private async Task HandleRemoveTeamMember(Guid teamId, Guid studentId)
+    {
+        if (confirm("Are you sure you want to remove this student from the team?"))
+        {
+            try
+            {
+                var team = await TeamsService.RemoveTeamMemberAsync(CourseId, teamId, studentId);
+                if (team != null)
+                {
+                    await LoadData();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error removing team member");
+            }
+        }
+    }
+
+    private void ToggleStudent(Guid studentId, object? isChecked)
+    {
+        if (isChecked is bool checkedValue)
+        {
+            if (checkedValue)
+            {
+                if (!createTeamRequest.StudentIds.Contains(studentId))
+                {
+                    createTeamRequest.StudentIds.Add(studentId);
+                }
+            }
+            else
+            {
+                createTeamRequest.StudentIds.Remove(studentId);
+            }
+        }
+    }
+}

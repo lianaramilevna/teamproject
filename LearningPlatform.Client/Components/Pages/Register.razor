@@ -1,0 +1,180 @@
+@page "/register"
+@rendermode InteractiveServer
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject ILogger<Register> Logger
+
+<PageTitle>Register - Learning Platform</PageTitle>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2><i class="bi bi-person-plus"></i> Get Started</h2>
+            <p>Create your account to start learning</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-circle"></i> @errorMessage
+            </div>
+        }
+
+        <EditForm Model="@registerRequest" OnValidSubmit="@HandleFormSubmit" FormName="registerForm">
+            <DataAnnotationsValidator />
+            <div class="mb-4">
+                <label class="form-label">
+                    <i class="bi bi-envelope"></i> Email Address
+                </label>
+                <InputText @bind-value="registerRequest.Email" class="form-control form-control-lg" placeholder="Enter your email" />
+                <ValidationMessage For="@(() => registerRequest.Email)" />
+                @if (!string.IsNullOrEmpty(registerRequest.Email) && !System.Text.RegularExpressions.Regex.IsMatch(registerRequest.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                {
+                    <div class="text-danger small mt-1">
+                        <i class="bi bi-info-circle"></i> Please enter a valid email address
+                    </div>
+                }
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">
+                    <i class="bi bi-lock"></i> Password
+                </label>
+                <InputText type="password" @bind-value="registerRequest.Password" class="form-control form-control-lg" placeholder="Create a password (min. 6 characters)" autocomplete="new-password" />
+                <ValidationMessage For="@(() => registerRequest.Password)" />
+                @if (!string.IsNullOrEmpty(registerRequest.Password) && registerRequest.Password.Length < 6)
+                {
+                    <div class="text-danger small mt-1">
+                        <i class="bi bi-info-circle"></i> Password must be at least 6 characters long
+                    </div>
+                }
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 mb-3" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    <span>Creating account...</span>
+                }
+                else
+                {
+                    <span>Create Account</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="text-center mt-4">
+            <p class="text-muted mb-0">Already have an account?</p>
+            <a href="/login" class="btn btn-link p-0">Sign in here</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterRequest registerRequest = new();
+    private string? errorMessage;
+    private bool isLoading = false;
+
+    private void HandleFormSubmit()
+    {
+        Logger.LogInformation("=== FORM SUBMIT - HandleFormSubmit START ===");
+        
+        // Validate
+        if (string.IsNullOrWhiteSpace(registerRequest.Email))
+        {
+            Logger.LogWarning("Email is empty");
+            errorMessage = "Email is required.";
+            StateHasChanged();
+            return;
+        }
+        
+        if (string.IsNullOrWhiteSpace(registerRequest.Password) || registerRequest.Password.Length < 6)
+        {
+            Logger.LogWarning("Password is empty or too short");
+            errorMessage = "Password is required and must be at least 6 characters long.";
+            StateHasChanged();
+            return;
+        }
+        
+        if (!System.Text.RegularExpressions.Regex.IsMatch(registerRequest.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+        {
+            Logger.LogWarning("Email format is invalid");
+            errorMessage = "Please enter a valid email address.";
+            StateHasChanged();
+            return;
+        }
+        
+        Logger.LogInformation("Validation passed, calling HandleRegisterAsync");
+        _ = HandleRegisterAsync();
+    }
+
+    private async Task HandleRegisterAsync()
+    {
+        try
+        {
+            await HandleRegister();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error in HandleRegisterAsync: {Message}", ex.Message);
+            errorMessage = $"An error occurred: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleRegister()
+    {
+        Logger.LogInformation("HandleRegister called. Email: {Email}, Password length: {PasswordLength}", 
+            registerRequest.Email ?? "null", 
+            registerRequest.Password?.Length ?? 0);
+        
+        if (string.IsNullOrWhiteSpace(registerRequest.Email) || string.IsNullOrWhiteSpace(registerRequest.Password))
+        {
+            Logger.LogError("Form data is empty!");
+            errorMessage = "Please fill in all fields.";
+            return;
+        }
+        
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            Logger.LogInformation("Calling AuthService.RegisterAsync");
+            var response = await AuthService.RegisterAsync(registerRequest);
+            Logger.LogInformation("AuthService.RegisterAsync returned. Response is null: {IsNull}, Token is empty: {TokenEmpty}", 
+                response == null, 
+                response?.Token == null || string.IsNullOrEmpty(response.Token));
+            
+            if (response != null && !string.IsNullOrEmpty(response.Token))
+            {
+                Logger.LogInformation("Registration successful, redirecting to courses");
+                await Task.Delay(100);
+                Navigation.NavigateTo("/courses", forceLoad: true);
+                return;
+            }
+            else
+            {
+                Logger.LogWarning("Registration failed: response is null or token is empty");
+                errorMessage = "Registration failed. Please check that the API is running and try again.";
+            }
+        }
+        catch (System.Net.Http.HttpRequestException ex)
+        {
+            Logger.LogError(ex, "Registration error: API connection failed. Message: {Message}", ex.Message);
+            errorMessage = "Cannot connect to the API server. Please make sure the backend is running on http://localhost:8080";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Registration error: {Message}, StackTrace: {StackTrace}", ex.Message, ex.StackTrace);
+            errorMessage = $"An error occurred during registration: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            Logger.LogInformation("HandleRegister completed. isLoading set to false");
+            StateHasChanged();
+        }
+    }
+}

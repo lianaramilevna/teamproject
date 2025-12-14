@@ -1,0 +1,87 @@
+is_global = true
+build_property.TargetFramework = net10.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = LearningPlatform.Client
+build_property.RootNamespace = LearningPlatform.Client
+build_property.ProjectDir = C:\Users\Pedant\Desktop\team_learn\team_learn\LearningPlatform.Client\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.RazorLangVersion = 8.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = C:\Users\Pedant\Desktop\team_learn\team_learn\LearningPlatform.Client
+build_property._RazorSourceGeneratorDebug = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/App.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Pages/AssignmentDetails.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBc3NpZ25tZW50RGV0YWlscy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Pages/Counter.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDb3VudGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Pages/CourseDetails.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDb3Vyc2VEZXRhaWxzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Pages/Courses.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDb3Vyc2VzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Pages/Error.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFcnJvci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Pages/GradeSubmission.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xHcmFkZVN1Ym1pc3Npb24ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Pages/Login.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xMb2dpbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Pages/Profile.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xQcm9maWxlLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Pages/Register.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xSZWdpc3Rlci5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Pages/Weather.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xXZWF0aGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Routes.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSb3V0ZXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/_Imports.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xfSW1wb3J0cy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Layout/MainLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTWFpbkxheW91dC5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-315j582jgs
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Layout/Navbar.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTmF2YmFyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-6ntayho8mf
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Layout/NavMenu.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTmF2TWVudS5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-gavy46uehu
+
+[C:/Users/Pedant/Desktop/team_learn/team_learn/LearningPlatform.Client/Components/Pages/Home.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIb21lLnJhem9y
+build_metadata.AdditionalFiles.CssScope = b-au3hy1j1ei
